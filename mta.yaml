@@ -1,0 +1,92 @@
+_schema-version: "3.2"
+ID: masterdetail
+version: 0.0.1
+modules:
+- name: masterdetail-destination-content
+  type: com.sap.application.content
+  requires:
+  - name: masterdetail-destination-service
+    parameters:
+      content-target: true
+  - name: masterdetail_html_repo_host
+    parameters:
+      service-key:
+        name: masterdetail_html_repo_host-key
+  - name: uaa_masterdetail
+    parameters:
+      service-key:
+        name: uaa_masterdetail-key
+  parameters:
+    content:
+      instance:
+        destinations:
+        - Name: appFioriMasterDetail_masterdetail_html_repo_host
+          ServiceInstanceName: masterdetail-html5-app-host-service
+          ServiceKeyName: masterdetail_html_repo_host-key
+          sap.cloud.service: appFioriMasterDetail
+        - Authentication: OAuth2UserTokenExchange
+          Name: appFioriMasterDetail_uaa_masterdetail
+          ServiceInstanceName: masterdetail-xsuaa-service
+          ServiceKeyName: uaa_masterdetail-key
+          sap.cloud.service: appFioriMasterDetail
+        existing_destinations_policy: ignore
+  build-parameters:
+    no-source: true
+- name: masterdetail-app-content
+  type: com.sap.application.content
+  path: .
+  requires:
+  - name: masterdetail_html_repo_host
+    parameters:
+      content-target: true
+  build-parameters:
+    build-result: resources
+    requires:
+    - artifacts:
+      - nsfiorimasterdetail.zip
+      name: nsfiorimasterdetail
+      target-path: resources/
+- name: nsfiorimasterdetail
+  type: html5
+  path: fiorimasterdetail
+  build-parameters:
+    build-result: dist
+    builder: custom
+    commands:
+    - npm install
+    - npm run build:cf
+    supported-platforms: []
+resources:
+- name: masterdetail-destination-service
+  type: org.cloudfoundry.managed-service
+  parameters:
+    config:
+      HTML5Runtime_enabled: true
+      init_data:
+        instance:
+          destinations:
+          - Authentication: NoAuthentication
+            Name: ui5
+            ProxyType: Internet
+            Type: HTTP
+            URL: https://ui5.sap.com
+          existing_destinations_policy: update
+      version: 1.0.0
+    service: destination
+    service-name: masterdetail-destination-service
+    service-plan: lite
+- name: masterdetail_html_repo_host
+  type: org.cloudfoundry.managed-service
+  parameters:
+    service: html5-apps-repo
+    service-name: masterdetail-html5-app-host-service
+    service-plan: app-host
+- name: uaa_masterdetail
+  type: org.cloudfoundry.managed-service
+  parameters:
+    path: ./xs-security.json
+    service: xsuaa
+    service-name: masterdetail-xsuaa-service
+    service-plan: application
+parameters:
+  deploy_mode: html5-repo
